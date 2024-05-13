@@ -1,40 +1,62 @@
 import requests
 
-
 class WeatherData:
     def __init__(self, api_key):
         self.api_key = api_key
-        self.base_url = "http://api.openweathermap.org/data/2.5/weather"
+        self.current_weather_url = "https://api.agromonitoring.com/agro/1.0/weather"
+        self.forecast_weather_url = "https://api.agromonitoring.com/agro/1.0/weather/forecast"
 
-    def get_weather(self, city):
+    def get_weather_by_coordinates(self, lat, lon):
+        return self.fetch_weather_data(lat, lon, self.current_weather_url)
+
+    def get_weather_forecast_by_coordinates(self, lat, lon):
+        return self.fetch_weather_data(lat, lon, self.forecast_weather_url)
+
+    def fetch_weather_data(self, lat, lon, url):
         try:
             params = {
-                'q': city,
-                'appid': self.api_key,
-                'units': 'metric'  # Request temperature in Celsius
+                'lat': lat,
+                'lon': lon,
+                'appid': self.api_key
             }
-            response = requests.get(self.base_url, params=params)
-            response.raise_for_status()  # Raise exception for non-200 status codes
+            response = requests.get(url, params=params)
+            response.raise_for_status()  # Raise exception for HTTP error responses
 
             data = response.json()
-            description = data['weather'][0]['description']
-            temperature_celsius = data['main']['temp']
-            temperature_fahrenheit = (temperature_celsius * 9 / 5) + 32
-
-            return f"Weather in {city.title()}: {description}, Temperature: {temperature_celsius:.2f} °C ({temperature_fahrenheit:.2f} °F)"
+            if url.endswith("forecast"):
+                return self.format_forecast_data(data)
+            return self.format_current_weather_data(data)
 
         except requests.RequestException as e:
-            return f"Failed to retrieve weather data: {e}"# request failed error, related to http requests
+            return f"Failed to retrieve weather data: {e}"  # HTTP or network error
 
         except (KeyError, IndexError) as e:
-            return f"Error parsing weather data: {e}" # exception when parsing wheather data in json file
+            return f"Error parsing weather data: {e}"  # Error in accessing data fields
 
         except Exception as e:
-            return f"An unexpected error occurred: {e}"# handling any other expected error
+            return f"An unexpected error occurred: {e}"  # Other errors
 
+    def format_current_weather_data(self, data):
+        weather_description = data['weather'][0]['description']
+        temperature_k = data['main']['temp']
+        temperature_c = temperature_k - 273.15  # Convert Kelvin to Celsius
+        temperature_f = (temperature_c * 9/5) + 32  # Convert Celsius to Fahrenheit
+        return f"Weather: {weather_description}, Temp: {temperature_c:.2f} °C ({temperature_f:.2f} °F), Humidity: {data['main']['humidity']}%, Wind: {data['wind']['speed']} m/s"
+
+    def format_forecast_data(self, data):
+        forecasts = []
+        for item in data:
+            date = item['dt']
+            weather_description = item['weather'][0]['description']
+            temperature_k = item['main']['temp']
+            temperature_c = temperature_k - 273.15  # Convert Kelvin to Celsius
+            forecasts.append(f"Date: {date}, Weather: {weather_description}, Temp: {temperature_c:.2f} °C")
+        return "\n".join(forecasts)
 
 # Example usage:
-weather_instance = WeatherData('87596aa1a39a1925e6cf81e1c866d9ec')
-city_name = 'New York'
-weather_info = weather_instance.get_weather(city_name)
+weather_instance = WeatherData('caf6429d5d94023d5089fb656817efad')
+lat, lon = 35, 139  # Example coordinates
+weather_info = weather_instance.get_weather_by_coordinates(lat, lon)
 print(weather_info)
+forecast_info = weather_instance.get_weather_forecast_by_coordinates(lat, lon)
+print(forecast_info)
