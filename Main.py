@@ -1,28 +1,25 @@
 import sys
 from PySide2.QtWidgets import QApplication
-from GUI import MyApplication  # Adjust import path as needed
-from soil import Soil
-from crops import Crops
-from sensors import Sensors
-from cyberAttack import Bug
-from Security import DataTamperSimulation
-from weather import WeatherData  # Make sure to import WeatherData
+from GUI import GUI
+from api_manager import APIManager
 
 def main():
     app = QApplication(sys.argv)
 
-    # Initialize instances of the classes
-    soil_instance = Soil()
-    crops_instance = Crops(soil_instance)
-    sensors_instance = Sensors()
-    bug_instance = Bug()
-    security_instance = DataTamperSimulation(sensors_instance)
-    weather_instance = WeatherData('87596aa1a39a1925e6cf81e1c866d9ec')  # Add your API key
+    # Fetch the API key securely, this is a placeholder for wherever you might securely store or retrieve it.
+    api_key = 'caf6429d5d94023d5089fb656817efad'  # Consider fetching this from an environment variable or a secure store for production
 
-    # Initialize MyApplication with all instances
-    window = MyApplication(soil_instance, crops_instance, sensors_instance, bug_instance, security_instance, weather_instance)
-    window.show()
-    sys.exit(app.exec_())
+    try:
+        # Initialize the API Manager with your secure API key
+        api_manager = APIManager(api_key)
+
+        # Create and display the GUI, passing the API manager for API interactions
+        window = GUI(api_manager)
+        window.show()
+        sys.exit(app.exec_())
+    except Exception as e:
+        print(f"Failed to start the application due to: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
